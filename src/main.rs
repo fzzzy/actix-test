@@ -1,20 +1,25 @@
-use actix_web::{middleware, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{web, App, Error, HttpResponse, HttpServer};
 
-use futures::Future;
+use futures::future::{ok, Future};
 
-pub fn handle_request() -> impl Future<Item = HttpResponse, Error = Error> {
-    futures::future::ok(HttpResponse::Ok().body("hello"))
+fn handle_request() -> impl Future<Output = Result<HttpResponse, Error>> {
+    ok(HttpResponse::Ok().body("hello"))
 }
 
-fn main() -> std::io::Result<()> {
+async fn handle_request_async_await() -> HttpResponse {
+    HttpResponse::Ok().body("olleh")
+}
+
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
     println!("Hello, world!");
 
-    HttpServer::new(move || {
+    HttpServer::new(|| {
         App::new()
-            .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(4096))
-            .service(web::resource("/").route(web::get().to_async(handle_request)))
+            .service(web::resource("/").route(web::get().to(handle_request)))
+            .service(web::resource("/async").route(web::get().to(handle_request_async_await)))
     })
     .bind("127.0.0.1:3000")?
     .run()
+    .await
 }
